@@ -26,6 +26,32 @@ def add_fuel(fuel):
         if y > height:
             break
 
+
+def set_color(x, y, fuel, temp):
+    """ Temperature based color setting """
+
+    if fuel[x][y] == 33:
+        return 0
+
+    if temp[x][y] > 12:
+        # How frequently we flicker
+        if random.randrange(8) == 0:
+            return 1
+        else:
+            return 3
+
+    if temp[x][y] > 8:
+        return 3
+
+    if temp[x][y] > 4:
+        return 1
+
+    if temp[x][y] > 0:
+        return 2
+
+    return 0
+
+
 def fire(stdscr):
 
     screen  = curses.initscr()
@@ -53,30 +79,17 @@ def fire(stdscr):
 
         for y in range(0, height):
             for x in range(0, width):
-                if random.randrange(5) == 0:
+                # How fast we go through the fuel
+                if random.randrange(2) == 0:
                     fire_check(x, y, temp, fuel, change)
 
         temp += change
 
         for x in range(0, width - 1):
             for y in range(0, height - 1):
-                if fuel[x][y] == 33:
-                    color = 0
-                elif temp[x][y] > 12:
-                    if random.randrange(8) == 0:
-                        color = 1
-                    else:
-                        color = 3
-                elif temp[x][y] > 8:
-                    color = 3
-                elif temp[x][y] > 4:
-                    color = 1
-                elif temp[x][y] > 0:
-                    color = 2
-                else:
-                    color = 0
-               
-                color = 0
+
+                color = set_color(x, y, fuel, temp)
+
                 screen.addstr(y, x, chr(fuel[x][y]), curses.color_pair(color) | curses.A_BOLD )
                 # TEMP screen.addstr(y, x, str(temp[x][y])[0], curses.color_pair(0) | curses.A_BOLD )
 
