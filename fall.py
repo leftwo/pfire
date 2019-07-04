@@ -7,196 +7,162 @@ import random
 import sys
 import argparse
 
-def fill_matrix(mat, msg_list, filename):
-    """ Read in a file and build the mat matrix based on the file contents
+class ddd(object):
+    """ The ddd object (Needs a better name).
     """
+    def __init__(self):
+        self.screen  = curses.initscr()
+        self.width   = self.screen.getmaxyx()[1]
+        self.height  = self.screen.getmaxyx()[0]
 
-    width = mat.shape[0]
-    height = mat.shape[1]
-    with open(filename) as f:
-        content = f.readlines()
-        content = [x.replace('\t', '        ') for x in content]
-        content = [x.strip('\r\n') for x in content] 
+        # The msg_list is a list of all the characters that make up what we
+        # are displaying.  Each member of the list has the characters current
+        # x,y position as well as the "home" position for that character.
+        # We only support the ASCII character set, and only the printable
+        # range (32-127).
+        self.msg_list = []
 
-    y = 0
-    for line in content:
-        x_max = min(width, len(line))
-        for x in range(x_max):
-            my_ch = ord(line[x])
-            if my_ch > 31 and my_ch < 127:
-                mat[x][y] = my_ch
-                msg_list.append( { 'home_x':x, 'home_y':y, \
-                                   'cur_x':x,  'cur_y':y, \
-                                   'msg':ord(line[x]) } )
+        self.screen_mat = np.full((self.width, self.height), 0)
+        curses.curs_set(0)
+        curses.start_color()
+        curses.init_pair(1,curses.COLOR_YELLOW,curses.COLOR_BLACK)
+        curses.init_pair(2,curses.COLOR_MAGENTA,curses.COLOR_BLACK)
+        curses.init_pair(3,curses.COLOR_RED,curses.COLOR_BLACK)
+        curses.init_pair(4,curses.COLOR_BLUE,curses.COLOR_BLACK)
+        self.screen.clear
 
-        y += 1
-        if y >= height:
-            break
+    def fill(self, filename):
+        """ Read in a file and build the mat matrix based on the file contents
+            This generates a new matrix to display after the import
+        """
+        with open(filename) as f:
+            # We convert tab to eight spaces, and strip off newline and CR
+            content = f.readlines()
+            content = [x.replace('\t', '        ') for x in content]
+            content = [x.strip('\r\n') for x in content] 
+        
+        y = 0
+        for line in content:
+            x_max = min(self.width, len(line))
+            for x in range(x_max):
+                my_ch = ord(line[x])
+                if my_ch > 31 and my_ch < 127:
+                    self.screen_mat[x][y] = my_ch
+                    self.msg_list.append( { 'home_x':x, 'home_y':y, \
+                                            'cur_x':x,  'cur_y':y, \
+                                            'msg':ord(line[x]) } )
 
-def show_screen(screen, new, width, height):
-    for x in range(0, width - 1):
-        for y in range(0, height - 1):
+            y += 1
+            if y >= self.height:
+                break
 
-            color = 3
-            # Print the character
-            if new[x][y] >= 32:
-                my_chr = chr(new[x][y])
-                screen.addstr(y, x, my_chr, curses.color_pair(color) | curses.A_BOLD )
-            else:
-                screen.addstr(y, x, ' ', curses.color_pair(color) | curses.A_BOLD )
-
-def move(stdscr, filename):
-    screen  = curses.initscr()
-    width   = screen.getmaxyx()[1]
-    height  = screen.getmaxyx()[0]
-    color   = 3
-
-    curses.curs_set(0)
-    curses.start_color()
-    curses.init_pair(1,curses.COLOR_YELLOW,curses.COLOR_BLACK)
-    curses.init_pair(2,curses.COLOR_MAGENTA,curses.COLOR_BLACK)
-    curses.init_pair(3,curses.COLOR_RED,curses.COLOR_BLACK)
-    curses.init_pair(4,curses.COLOR_BLUE,curses.COLOR_BLACK)
-    screen.clear
-
-    msg_list = []
-    new = np.full((width, height), 0)
-    fill_matrix(new, msg_list, args.file)
-
-    # Make this an object, make the print part of the object
-    for x in range(0, width - 1):
-        for y in range(0, height - 1):
-            color = 0
-            # Print the character
-            if new[x][y] >= 32:
-                my_chr = chr(new[x][y])
-                screen.addstr(y, x, my_chr, curses.color_pair(color) | curses.A_BOLD )
-            else:
-                screen.addstr(y, x, ' ', curses.color_pair(color) | curses.A_BOLD )
-
-    screen.refresh()
-
-    time.sleep(4)
-    st = 1
-    # This is the random movement phase of the message
-    while True:
-        for x in range(0, width - 1):
-            for y in range(0, height - 1):
-
-                color = (x + y) % 5 + 1
+    def show(self):
+        """ Dump the current screen matrix to the screen
+        """
+        for x in range(0, self.width - 1):
+            for y in range(0, self.height - 1):
                 color = 0
                 # Print the character
-                if new[x][y] >= 32:
-                    my_chr = chr(new[x][y])
-                    screen.addstr(y, x, my_chr, curses.color_pair(color) | curses.A_BOLD )
+                if self.screen_mat[x][y] >= 32:
+                    my_chr = chr(self.screen_mat[x][y])
+                    self.screen.addstr(y, x, my_chr, curses.color_pair(color) | curses.A_BOLD )
                 else:
-                    screen.addstr(y, x, ' ', curses.color_pair(color) | curses.A_BOLD )
+                    self.screen.addstr(y, x, ' ', curses.color_pair(color) | curses.A_BOLD )
 
+        self.screen.refresh()
+        self.screen.timeout(30)
 
-        screen.refresh()
-        screen.timeout(30)
+    def key_press(self):
+        """ Check to see if a curses keypress was detected """
+        if self.screen.getch() != -1:
+            return True;
 
-        time.sleep(st)
-        if st > 0.0625:
-            st = st - 0.003125
+        return False;
 
-        if screen.getch() != -1:
-            break
+    def move(self):
+        """ Move all characters in our message list
+            For both X and Y, we randomly add -1, 0, or 1 to each
+            This generates a new matrix to display after the move
+        """
+        self.screen_mat = np.full((self.width, self.height), 0)
+        for msg in self.msg_list:
+            if random.randrange(5) == 0:
+                new_x = msg['cur_x'] + (random.randrange(-1, 2))
+                new_y = msg['cur_y'] + (random.randrange(-1, 2))
+                if new_x >= self.width:
+                    new_x = self.width - 1
+                if new_x < 0:
+                    new_x = 1
+                if new_y >= self.height:
+                    new_y = self.height - 1
+                if new_y < 0:
+                    new_y = 1
 
-        new = np.full((width, height), 0)
-        move_it(msg_list, new)
+                msg['cur_x'] = new_x
+                msg['cur_y'] = new_y
+                self.screen_mat[new_x][new_y] = msg['msg']
+            else:
+                new_x = msg['cur_x']
+                new_y = msg['cur_y']
+                self.screen_mat[new_x][new_y] = msg['msg']
 
-    # Done random movement, now put things back
-    show_screen(screen, new, width, height)
-    time.sleep(3)
-    final = np.full((width, height), 0)
-    moved = 1
-    st = 0.25 
-    new = np.full((width, height), 0)
-    while go_home(msg_list, new, final) != 0:
-        for x in range(0, width - 1):
-            for y in range(0, height - 1):
-                color = (x + y) % 5 + 1
-                color = 0
-                # Print the character
-                if final[x][y] >= 32:
-                    my_chr = chr(final[x][y])
-                    screen.addstr(y, x, my_chr, curses.color_pair(0) | curses.A_BOLD )
-                else:
-                    screen.addstr(y, x, ' ', curses.color_pair(color) | curses.A_BOLD )
-                if new[x][y] >= 32:
-                    my_chr = chr(new[x][y])
-# color = random.randrange(5) + 1
-                    screen.addstr(y, x, my_chr, curses.color_pair(color) | curses.A_BOLD )
+    def go_home(self):
+        """ Move everything on msg_list toward home.
+            Return the number of things moved, or the number of
+            things not yet home
+            This generates a new matrix to display after the move
+        """
+        moved = 0
+        self.screen_mat = np.full((self.width, self.height), 0)
+        for msg in self.msg_list:
+            # Move the X home
+            if msg['cur_x'] < msg['home_x']:
+                msg['cur_x'] += 1
+                moved += 1
+            elif msg['cur_x'] > msg['home_x']:
+                msg['cur_x'] -= 1
+                moved += 1
 
-        screen.refresh()
-        screen.timeout(30)
-        new = np.full((width, height), 0)
-        if screen.getch() != -1:
-            break
+            # Move the Y home
+            if msg['cur_y'] < msg['home_y']:
+                msg['cur_y'] += 1
+                moved += 1
+            elif msg['cur_y'] > msg['home_y']:
+                msg['cur_y'] -= 1
+                moved += 1
 
-        time.sleep(st)
-
-    while screen.getch() == -1:
-        time.sleep(0.25)
-
-def move_it(msg_list, new):
-    width = new.shape[0]
-    height = new.shape[1]
-    # For both X and Y, we randomly add -1, 0, or 1 to each, then mod by the
-    # max for that dimention
-    for msg in msg_list:
-        if random.randrange(5) == 0:
-            new_x = msg['cur_x'] + (random.randrange(-1, 2))
-            new_y = msg['cur_y'] + (random.randrange(-1, 2))
-            if new_x >= width:
-                new_x = width - 1
-            if new_x < 0:
-                new_x = 1
-            if new_y >= height:
-                new_y = height - 1
-            if new_y < 0:
-                new_y = 1
-
-            msg['cur_x'] = new_x
-            msg['cur_y'] = new_y
-            new[new_x][new_y] = msg['msg']
-        else:
             new_x = msg['cur_x']
             new_y = msg['cur_y']
-            new[new_x][new_y] = msg['msg']
 
-def go_home(msg_list, new, final):
-    width = new.shape[0]
-    height = new.shape[1]
-    moved = 0
-    for msg in msg_list:
-        # Move the X home
-        if msg['cur_x'] < msg['home_x']:
-            msg['cur_x'] += 1
-            moved += 1
-        elif msg['cur_x'] > msg['home_x']:
-            msg['cur_x'] -= 1
-            moved += 1
+            self.screen_mat[new_x][new_y] = msg['msg']
 
-        # Move the Y home
-        if msg['cur_y'] < msg['home_y']:
-            msg['cur_y'] += 1
-            moved += 1
-        elif msg['cur_y'] > msg['home_y']:
-            msg['cur_y'] -= 1
-            moved += 1
+        return moved
 
-        new_x = msg['cur_x']
-        new_y = msg['cur_y']
+def move(stdscr, filename):
+    
+    my_dis = ddd()
+    my_dis.fill(args.file)
+    my_dis.show()
+    time.sleep(2)
 
-        if new_x == msg['home_x'] and new_y == msg['home_y']:
-            final[new_x][new_y] = msg['msg']
+    st = 0.25 
+    while my_dis.key_press() != True:
+        my_dis.move()
+        my_dis.show()
 
-        else:
-            new[new_x][new_y] = msg['msg']
+        time.sleep(st)
+        if st > 0.0225:
+            st = st / 2 
+            
+    while my_dis.go_home() != 0:
+        my_dis.show()
+        if my_dis.key_press() == True:
+            break
 
-    return moved
+    while my_dis.key_press() != True:
+        pass
+
+    return
 
 
 if __name__ == "__main__":
@@ -206,34 +172,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     wrapper(move, args.file)
-    sys.exit(0)
-
-    width = 41
-    height = 21
-    msg_list = []
-    new = np.full((width, height), 0)
-    fill_matrix(new, msg_list, args.file)
-
-    print(new)
-    print("")
-
-    sys.exit(0)
-    for x in range(10):
-        new = np.full((width, height), 0)
-        move_it(msg_list, new)
-        time.sleep(1)
-        print(new)
-        print("")
-
-    print("###########################")
-    # Make a final array when things return to their initial placement
-    final = np.full((width, height), 0)
-    moved = 1
-    new = np.full((width, height), 0)
-    while go_home(msg_list, new, final) != 0:
-        print(new)
-        print("")
-        time.sleep(1)
-        new = np.full((width, height), 0)
-
-    print(final)
