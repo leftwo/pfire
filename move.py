@@ -12,6 +12,8 @@ class ddd(object):
     """
     def __init__(self):
         self.screen  = curses.initscr()
+        curses.noecho()
+        curses.cbreak()
         self.width   = self.screen.getmaxyx()[1]
         self.height  = self.screen.getmaxyx()[0]
 
@@ -74,10 +76,8 @@ class ddd(object):
 
     def key_press(self):
         """ Check to see if a curses keypress was detected """
-        if self.screen.getch() != -1:
-            return True;
-
-        return False;
+        self.screen.nodelay(True)
+        return self.screen.getch()
 
     def move(self):
         """ Move all characters in our message list
@@ -138,30 +138,41 @@ class ddd(object):
 
         return moved
 
-def move(stdscr, filename):
+def start_movement(stdscr, filename):
     
     my_dis = ddd()
     my_dis.fill(args.file)
     my_dis.show()
-    time.sleep(2)
 
     st = 0.25 
-    while my_dis.key_press() != True:
-        my_dis.move()
+    action = 0
+    while True:
+        command = 0
+        command = my_dis.key_press()
+        if command == ord('m'):
+            action = 1
+        elif command == ord('r'):
+            action = 2
+        elif command == ord('p'):
+            action = 0
+            # Pause where we are
+
+        elif command == ord('q'):
+            break
+
+        if action == 1:
+            my_dis.move()
+
+        elif action == 2:
+            my_dis.go_home()
+            st = 0.125
+
         my_dis.show()
 
         time.sleep(st)
         if st > 0.0225:
             st = st / 2 
             
-    while my_dis.go_home() != 0:
-        my_dis.show()
-        if my_dis.key_press() == True:
-            break
-
-    while my_dis.key_press() != True:
-        pass
-
     return
 
 
@@ -171,4 +182,4 @@ if __name__ == "__main__":
             display and decay')
     args = parser.parse_args()
 
-    wrapper(move, args.file)
+    wrapper(start_movement, args.file)
