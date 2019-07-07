@@ -20,10 +20,15 @@ class ddd(object):
         self.height = self.screen.getmaxyx()[0]
 
         # The msg_list is a list of all the characters that make up what we
-        # are displaying.  Each member of the list has the characters current
-        # x,y position as well as the "home" position for that character.
-        # We only support the ASCII character set, and only the printable
-        # range (32-127).
+        # are displaying.
+        # Each member of the list has:
+        # cur_x, cur_y     The characters current x,y position.
+        # home_x, home_y   The "home" position for that character.
+        # direction        If falling, which way we are going.
+        # speed            If falling (or rising) how fast
+        #
+        # We only support the ASCII character set, and of that, only the
+        # printable range (32-127).
         self.msg_list = []
 
         self.screen_mat = np.full((self.width, self.height), 0)
@@ -54,6 +59,8 @@ class ddd(object):
                     self.screen_mat[x][y] = my_ch
                     self.msg_list.append({'home_x': x, 'home_y': y,
                                           'cur_x': x,  'cur_y': y,
+                                          'direction': 'down',
+                                          'speed': 0,
                                           'msg': ord(line[x])})
 
             y += 1
@@ -128,6 +135,30 @@ class ddd(object):
         cur_x = msg['cur_x']
         cur_y = msg['cur_y']
         return self.empty_space(cur_x, cur_y)
+
+    def do_fall(self):
+        """ Fall characters in our message list.
+            We re-use the existing screen matrix, but we have to clear out a
+            space when we leave it, so someone else can move into it.
+        """
+        for msg in self.msg_list:
+            cur_x = msg['cur_x']
+            cur_y = msg['cur_y']
+            direction = msg['direction']
+            speed = msg['speed']
+
+            if direction == 'down':
+                if cur_y + 1 < self.height - 1 \
+                  and self.screen_mat[cur_x][cur_y + 1] <= 32:
+
+                    new_y = cur_y + 1
+                    msg['cur_y'] = new_y
+                    msg['speed'] = msg['speed'] + 1
+                    self.screen_mat[cur_x][new_y] = msg['msg']
+                    self.screen_mat[cur_x][cur_y] = 0
+
+                elif cur_y == self.height - 1:
+                    msg['directon'] = None
 
     def move_uniq(self):
         """ Move characters in our message list, but only if there is a nearby
@@ -244,6 +275,8 @@ def start_movement(stdscr, filename):
         elif command == ord('p'):
             action = 0
             # Pause where we are
+        elif command == ord('f'):
+            action = 3
 
         elif command == ord('s'):
             my_dis.move_uniq()
@@ -256,7 +289,10 @@ def start_movement(stdscr, filename):
 
         elif action == 2:
             my_dis.go_home()
-            st = 0.125
+#  st = 0.125
+
+        elif action == 3:
+            my_dis.do_fall()
 
         my_dis.show()
 
