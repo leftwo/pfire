@@ -1,5 +1,6 @@
-#!/usr/bin/python
-import curses, random
+# License, blah.
+import curses
+import random
 from curses import wrapper
 import numpy as np
 import time
@@ -7,15 +8,16 @@ import random
 import sys
 import argparse
 
+
 class ddd(object):
     """ The ddd object (Needs a better name).
     """
     def __init__(self):
-        self.screen  = curses.initscr()
+        self.screen = curses.initscr()
         curses.noecho()
         curses.cbreak()
-        self.width   = self.screen.getmaxyx()[1]
-        self.height  = self.screen.getmaxyx()[0]
+        self.width = self.screen.getmaxyx()[1]
+        self.height = self.screen.getmaxyx()[0]
 
         # The msg_list is a list of all the characters that make up what we
         # are displaying.  Each member of the list has the characters current
@@ -27,10 +29,10 @@ class ddd(object):
         self.screen_mat = np.full((self.width, self.height), 0)
         curses.curs_set(0)
         curses.start_color()
-        curses.init_pair(1,curses.COLOR_YELLOW,curses.COLOR_BLACK)
-        curses.init_pair(2,curses.COLOR_MAGENTA,curses.COLOR_BLACK)
-        curses.init_pair(3,curses.COLOR_RED,curses.COLOR_BLACK)
-        curses.init_pair(4,curses.COLOR_BLUE,curses.COLOR_BLACK)
+        curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(4, curses.COLOR_BLUE, curses.COLOR_BLACK)
         self.screen.clear
 
     def fill(self, filename):
@@ -50,9 +52,9 @@ class ddd(object):
                 my_ch = ord(line[x])
                 if my_ch > 31 and my_ch < 127:
                     self.screen_mat[x][y] = my_ch
-                    self.msg_list.append( { 'home_x':x, 'home_y':y, \
-                                            'cur_x':x,  'cur_y':y, \
-                                            'msg':ord(line[x]) } )
+                    self.msg_list.append({'home_x': x, 'home_y': y,
+                                          'cur_x': x,  'cur_y': y,
+                                          'msg': ord(line[x])})
 
             y += 1
             if y >= self.height:
@@ -64,12 +66,13 @@ class ddd(object):
         """
         for x in range(0, int(((self.width - 1) / 2) - 1)):
             for y in range(0, self.height - 1):
-                if self.empty_space(x, y) == True:
+                if self.empty_space(x, y):
                     color = 0
                 else:
                     color = 1
 
-                self.screen.addstr(y, x * 2, str(self.screen_mat[x][y]), curses.color_pair(color) | curses.A_BOLD )
+                self.screen.addstr(y, x * 2, str(self.screen_mat[x][y]),
+                                   curses.color_pair(color) | curses.A_BOLD)
 
     def show(self):
         """ Dump the current screen matrix to the screen
@@ -78,16 +81,20 @@ class ddd(object):
             for y in range(0, self.height - 1):
                 # If desired, change empty_space color to something different
                 # to indicate this space can move.  Useful for debugging
-                if self.empty_space(x, y) == True:
+                if self.empty_space(x, y):
                     color = 0
                 else:
                     color = 0
 
                 if self.screen_mat[x][y] >= 32:
                     my_chr = chr(self.screen_mat[x][y])
-                    self.screen.addstr(y, x, my_chr, curses.color_pair(color) | curses.A_BOLD )
+                    self.screen.addstr(y, x, my_chr,
+                                       curses.color_pair(color) |
+                                       curses.A_BOLD)
                 else:
-                    self.screen.addstr(y, x, ' ', curses.color_pair(color) | curses.A_BOLD )
+                    self.screen.addstr(y, x, ' ',
+                                       curses.color_pair(color) |
+                                       curses.A_BOLD)
 
         self.screen.refresh()
         self.screen.timeout(30)
@@ -215,8 +222,12 @@ class ddd(object):
 
         return moved
 
-def start_movement(stdscr, filename):
 
+def start_movement(stdscr, filename):
+    """ Main movement loop.
+        Here we decide what to do next, based on new or previous
+        key presses.
+    """
     my_dis = ddd()
     my_dis.fill(args.file)
     my_dis.show()
