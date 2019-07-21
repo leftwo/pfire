@@ -41,9 +41,6 @@ class ddd(object):
         self.fuel = np.full((self.width, self.height), 32)
         self.temp = np.full((self.width, self.height), 0)
 
-        self.temp[0][2] = 3
-        self.temp[2][5] = 5
-
         curses.curs_set(0)
         curses.start_color()
         curses.init_pair(1,curses.COLOR_YELLOW,curses.COLOR_BLACK)
@@ -51,6 +48,12 @@ class ddd(object):
         curses.init_pair(3,curses.COLOR_RED,curses.COLOR_BLACK)
         curses.init_pair(4,curses.COLOR_BLUE,curses.COLOR_BLACK)
         self.screen.clear
+
+    def add_hot_spot(self):
+
+        x = random.randrange(self.width)
+        y = random.randrange(self.height)
+        self.temp[x][y] = 5
 
     def add_fuel(self, filename):
         """ Read in a file and build the fuel matrix based on the file contents
@@ -144,8 +147,11 @@ def fire(stdscr, filename):
 
     while True:
         command = my_dis.key_press()
-        if command != -1:
+        if command == ord('q'):
             break
+        if command == ord('h'):
+            my_dis.add_hot_spot()
+
         my_dis.burn_step()
         my_dis.show_screen()
 
