@@ -1,11 +1,12 @@
-#!/usr/bin/python
-import curses, random
+import curses
+import random
 from curses import wrapper
 import numpy as np
 import time
 import random
 import sys
 import argparse
+
 
 def set_color(x, y, fuel, temp):
     """ Temperature based color setting """
@@ -31,22 +32,23 @@ def set_color(x, y, fuel, temp):
 
     return 0
 
+
 class ddd(object):
     """ Needs a better name """
     def __init__(self):
-        self.screen  = curses.initscr()
-        self.width   = self.screen.getmaxyx()[1]
-        self.height  = self.screen.getmaxyx()[0]
+        self.screen = curses.initscr()
+        self.width = self.screen.getmaxyx()[1]
+        self.height = self.screen.getmaxyx()[0]
 
         self.fuel = np.full((self.width, self.height), 32)
         self.temp = np.full((self.width, self.height), 0)
 
         curses.curs_set(0)
         curses.start_color()
-        curses.init_pair(1,curses.COLOR_YELLOW,curses.COLOR_BLACK)
-        curses.init_pair(2,curses.COLOR_MAGENTA,curses.COLOR_BLACK)
-        curses.init_pair(3,curses.COLOR_RED,curses.COLOR_BLACK)
-        curses.init_pair(4,curses.COLOR_BLUE,curses.COLOR_BLACK)
+        curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(4, curses.COLOR_BLUE, curses.COLOR_BLACK)
         self.screen.clear
 
     def add_hot_spot(self):
@@ -60,16 +62,16 @@ class ddd(object):
         """
         with open(filename) as f:
             content = f.readlines()
-            content = [x.strip() for x in content] 
+            content = [x.strip() for x in content]
 
         y = 0
         for line in content:
-            x_max = min(self.width, len(line))
+            x_max = min(self.width - 1, len(line))
             for x in range(x_max):
                 self.fuel[x][y] = int(ord(line[x]))
 
             y += 1
-            if y > self.height:
+            if y >= self.height - 1:
                 break
 
     def show_screen(self):
@@ -80,9 +82,11 @@ class ddd(object):
 
                 # Print the character
                 my_chr = chr(self.fuel[x][y])
-                self.screen.addstr(y, x, my_chr, curses.color_pair(color) | curses.A_BOLD )
+                self.screen.addstr(y, x, my_chr,
+                                   curses.color_pair(color) | curses.A_BOLD)
                 # Print the left most digit of the temperature.
-                # screen.addstr(y, x, str(temp[x][y])[0], curses.color_pair(color) | curses.A_BOLD )
+                # screen.addstr(y, x, str(temp[x][y])[0],
+                #               curses.color_pair(color) | curses.A_BOLD )
 
         self.screen.refresh()
         self.screen.timeout(30)
@@ -107,10 +111,10 @@ class ddd(object):
     def fire_check_point(self, x, y, change):
 
         if self.fuel[x][y] > 32:
-           if self.temp[x][y] > 2:
+            if self.temp[x][y] > 2:
                 self.temp[x][y] += 1
                 self.fuel[x][y] = self.fuel[x][y] - 1
-           else:
+            else:
                 self.temp[x][y] = max(0, self.temp[x][y] - 1)
 
         # Empty cells drain heat faster than full
@@ -138,6 +142,7 @@ class ddd(object):
                 change[x][y - 1] = min(200, max(change[x][y - 1], heat_spread))
             if y < (self.height - 1) and y >= 0:
                 change[x][y + 1] = min(200, max(change[x][y + 1], heat_spread))
+
 
 def fire(stdscr, filename):
     """ Main loop for display."""
