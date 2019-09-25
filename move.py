@@ -151,7 +151,6 @@ class ddd(object):
             cur_x = msg['cur_x']
             cur_y = msg['cur_y']
             direction = msg['direction']
-            speed = msg['speed']
 
             if direction == 'down':
                 if cur_y + 1 < self.height - 1 \
@@ -282,7 +281,7 @@ def start_movement(stdscr, filename):
         key presses.
     """
     my_dis = ddd()
-    my_dis.fill(args.file)
+    my_dis.fill(filename)
     my_dis.show()
 
     st = 0.25
