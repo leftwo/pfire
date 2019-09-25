@@ -1,12 +1,10 @@
 # License, blah.
 import curses
-import random
 from curses import wrapper
-import numpy as np
-import time
 import random
-import sys
+import time
 import argparse
+import numpy as np
 
 
 class ddd(object):
@@ -18,6 +16,7 @@ class ddd(object):
         curses.cbreak()
         self.width = self.screen.getmaxyx()[1]
         self.height = self.screen.getmaxyx()[0]
+        self.encrypt = False
 
         # The msg_list is a list of all the characters that make up what we
         # are displaying.
@@ -26,6 +25,7 @@ class ddd(object):
         # home_x, home_y   The "home" position for that character.
         # direction        If falling, which way we are going.
         # speed            If falling (or rising) how fast
+        # msg, orig_msg   The current and original value for the location
         #
         # We only support the ASCII character set, and of that, only the
         # printable range (32-127).
@@ -39,7 +39,10 @@ class ddd(object):
         curses.init_pair(2, curses.COLOR_MAGENTA, -1)
         curses.init_pair(3, curses.COLOR_RED, -1)
         curses.init_pair(4, curses.COLOR_BLUE, -1)
-        self.screen.clear
+        self.screen.clear()
+
+    def set_encrypt(self):
+        self.encrypt = True
 
     def fill(self, filename):
         """ Read in a file and build the mat matrix based on the file contents
@@ -59,10 +62,11 @@ class ddd(object):
                 if my_ch > 31 and my_ch < 127:
                     self.screen_mat[x][y] = my_ch
                     self.msg_list.append({'home_x': x, 'home_y': y,
-                                          'cur_x': x,  'cur_y': y,
+                                          'cur_x': x, 'cur_y': y,
                                           'direction': 'down',
                                           'speed': 0,
-                                          'msg': ord(line[x])})
+                                          'msg': ord(line[x]),
+                                          'orig_msg': ord(line[x])})
 
             y += 1
             if y >= self.height:
@@ -96,6 +100,7 @@ class ddd(object):
 
                 if self.screen_mat[x][y] >= 32:
                     my_chr = chr(self.screen_mat[x][y])
+
                     self.screen.addstr(y, x, my_chr,
                                        curses.color_pair(color) |
                                        curses.A_BOLD)
@@ -168,6 +173,10 @@ class ddd(object):
             space when we leave it, so someone else can move into it.
         """
         for msg in self.msg_list:
+            if self.encrypt and msg['msg'] != 32:
+                move_step = random.randrange(5)
+                msg['msg'] = max((msg['msg'] + move_step) % 127, 33)
+
             # Move only so often, otherwise, just stay in place.
             if self.place_to_move(msg) and random.randrange(2) == 0:
 
@@ -202,6 +211,9 @@ class ddd(object):
         """
         self.screen_mat = np.full((self.width, self.height), 0)
         for msg in self.msg_list:
+            if self.encrypt:
+                msg['msg'] = max(msg['msg'] + 1 % 127, 32)
+
             if random.randrange(5) == 0:
                 new_x = msg['cur_x'] + (random.randrange(-1, 2))
                 new_y = msg['cur_y'] + (random.randrange(-1, 2))
@@ -252,6 +264,15 @@ class ddd(object):
 
             self.screen_mat[new_x][new_y] = msg['msg']
 
+        # If we are home, and encrypt is on, decrypt
+        if moved == 0 and self.encrypt:
+            for msg in self.msg_list:
+                if msg['msg'] != msg['orig_msg']:
+                    if msg['msg'] < msg['orig_msg']:
+                        msg['msg'] = msg['msg'] + 1
+                    else:
+                        msg['msg'] = msg['msg'] - 1
+
         return moved
 
 
@@ -269,20 +290,25 @@ def start_movement(stdscr, filename):
     while True:
         command = 0
         command = my_dis.key_press()
-        if command == ord('m'):
+        if command == ord('e'):
+            my_dis.set_encrypt()
+        elif command == ord('m'):
+            # Start moving
             action = 1
         elif command == ord('r'):
+            # Return home
             action = 2
         elif command == ord('p'):
-            action = 0
             # Pause where we are
+            action = 0
         elif command == ord('f'):
+            # Fall to the bottom
             action = 3
-
         elif command == ord('s'):
+            # Single step (if paused)
             my_dis.move_uniq()
-
         elif command == ord('q'):
+            # quit
             break
 
         if action == 1:
@@ -290,7 +316,6 @@ def start_movement(stdscr, filename):
 
         elif action == 2:
             my_dis.go_home()
-#  st = 0.125
 
         elif action == 3:
             my_dis.do_fall()
